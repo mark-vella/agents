@@ -1,0 +1,63 @@
+---
+description: This rule covers best practices and usage of neverthrow's asynchronous ResultAsync API, and applies to any repo using neverthrow.
+globs:
+alwaysApply: true
+---
+
+# Neverthrow Asynchronous API Usage (ResultAsync)
+
+## Core Principles
+- Use `ResultAsync<T, E>` to represent async operations that may succeed (`Ok`) or fail (`Err`).
+- `ResultAsync` is a wrapper around a `Promise<Result<T, E>>` and is thenable (can be awaited).
+- Always handle both success and error cases explicitly—never ignore a `ResultAsync`.
+
+## Creating Async Results
+- Use `okAsync(value)` for async success, `errAsync(error)` for async failure.
+- Use `ResultAsync.fromPromise(promise, errorFn)` to wrap a possibly-rejecting promise.
+- Use `ResultAsync.fromSafePromise(promise)` for promises that cannot reject.
+- Use `ResultAsync.fromThrowable(fn, errorFn)` to wrap async functions that may throw.
+
+## Handling Async Results
+- Use `.map(fn)` to transform the value if `Ok`, or `.mapErr(fn)` to transform the error if `Err`. Both can be async or sync functions.
+- Use `.andThen(fn)` to chain operations that return a `Result` or `ResultAsync`.
+- Use `.unwrapOr(defaultValue)` to extract the value or provide a fallback (returns a Promise).
+- Use `.match(okFn, errFn)` to exhaustively handle both cases (returns a Promise). This is the safest and most explicit way.
+- **Never** use `._unsafeUnwrap()` or `._unsafeUnwrapErr()` in production code—these are for tests only.
+
+## Combining Async Results
+- Use `ResultAsync.combine([ ... ])` to aggregate multiple `ResultAsync`s. Returns `Ok` if all succeed, or the first `Err`.
+- Use `ResultAsync.combineWithAllErrors([ ... ])` to collect all errors from a list of `ResultAsync`s.
+
+## Interop with Promises/Async Code
+- Use `ResultAsync.fromPromise` or `fromThrowable` to bring external async code into the neverthrow world.
+- You can chain from sync `Result` to async `ResultAsync` using `.asyncAndThen`.
+
+## Best Practices
+1. **Chain, then await**: Chain as many operations as possible before the final `await` for cleaner code.
+2. **Always handle every ResultAsync**—never ignore or leave unhandled.
+3. **Use `fromPromise` for external async operations**.
+4. **Mix sync and async**: Use `.andThen`/`.asyncAndThen` to bridge between sync and async flows.
+5. **Type your errors** for better safety and maintainability.
+6. **Install and use `eslint-plugin-neverthrow`** to enforce correct usage.
+7. **Avoid using `_unsafeUnwrap` outside of tests.**
+
+## Example
+```typescript
+import { okAsync, errAsync, ResultAsync } from 'neverthrow';
+
+function fetchUser(id: string): ResultAsync<User, Error> {
+  return ResultAsync.fromPromise(
+    fetch(`/api/user/${id}`).then(res => res.json()),
+    e => new Error('Failed to fetch user')
+  );
+}
+
+const result = await fetchUser('123')
+  .map(user => user.name)
+  .andThen(name => name ? okAsync(name) : errAsync('No name'));
+
+await result.match(
+  name => console.log('User name:', name),
+  error => console.error('Error:', error)
+);
+```

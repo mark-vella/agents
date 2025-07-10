@@ -1,0 +1,78 @@
+---
+description: This rule covers best practices and usage of Reown's AppKit SDK, for any repo using AppKit.
+alwaysApply: false
+---
+# Reown AppKit Usage Guide
+
+## Core Principles
+- AppKit is a full-stack SDK for wallet onboarding, transactions, payments, and more, supporting EVM, Solana, Bitcoin, and 600+ wallets.
+- Designed to be framework-agnostic: works with React, Next.js, Vue, Svelte, vanilla JS, and more.
+- Initialization and configuration are critical—most issues stem from misconfiguration.
+
+## Configuration & Initialization
+- **Always use a valid `projectId`** from [Reown Cloud](https://cloud.reown.com/) and add your domain to allowed domains.
+- **Call `createAppKit` outside of your component** (e.g., at the module or config level) to ensure proper initialization and avoid modal/wallet issues.
+- **All @reown libraries must use the same version** in your `package.json` to avoid compatibility issues.
+- **You can only call `createAppKit` once** during the application's lifecycle. Plan all supported networks up front.
+- Use the `networks` option to specify supported chains. Use `customRpcUrls` to override default RPC endpoints.
+- For custom branding, use `themeMode`, `themeVariables`, `chainImages`, and `connectorImages` options.
+- To enable analytics, set the `metadata` option.
+
+## Feature Usage
+- AppKit supports onboarding via email, social login, and wallets. Enable/disable features via the `features` config.
+- Use built-in support for swaps, on-ramp, smart accounts, notifications, and more by enabling the relevant features.
+- For multi-chain/multi-wallet, use the provided hooks/composables (e.g., `useAppKitAccount`) to access addresses for each namespace.
+- For advanced flows (e.g., Telegram MiniApps, custom UI), refer to the [official docs](https://docs.reown.com/appkit/overview).
+
+## Error Handling & Troubleshooting
+- If you see "Invalid App Configuration", check your `projectId` and allowed domains.
+- If wallets do not appear in the modal, check for version mismatches and ensure `createAppKit` is called outside components.
+- If you need to use custom RPCs, set the `customRpcUrls` option in your config.
+- You cannot reinitialize AppKit with different networks after the first call.
+- Only enterprise clients can remove "UX by Reown" branding (contact sales@reown.com).
+- Free support is via [Discord](https://discord.gg/reown); Pro/Enterprise get priority support.
+
+## Best Practices
+1. **Initialize AppKit once, outside of components.**
+2. **Keep all @reown dependencies on the same version.**
+3. **Handle all supported chains/networks up front.**
+4. **Use provided hooks/composables for account and state management.**
+5. **Consult the [FAQ](https://docs.reown.com/appkit/faq) and [examples](https://github.com/reown-com/appkit-web-examples) for common patterns.**
+6. **For production, secure your `projectId` and domain settings.**
+
+## Example (React)
+```typescript
+import { createAppKit } from '@reown/appkit'
+
+const modal = createAppKit({
+  projectId: 'YOUR_PROJECT_ID',
+  networks: [/* ... */],
+  adapters: [/* ... */],
+  features: { analytics: true },
+  customRpcUrls: { /* ... */ },
+  themeMode: 'dark',
+  // ...other options
+})
+
+export function App() {
+  return (
+    <WagmiProvider /* ... */>
+      <QueryClientProvider /* ... */>
+        <appkit-button />
+      </QueryClientProvider>
+    </WagmiProvider>
+  )
+}
+```
+
+## Example (Multi-Chain Account Access)
+```typescript
+import { useAppKitAccount } from '@reown/appkit/react'
+
+const eip155Account = useAppKitAccount({ namespace: 'eip155' })
+const solanaAccount = useAppKitAccount({ namespace: 'solana' })
+
+// Usage:
+<EVMAddress>{eip155Account.address}</EVMAddress>
+<SolanaAddress>{solanaAccount.address}</SolanaAddress>
+```

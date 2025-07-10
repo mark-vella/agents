@@ -1,0 +1,115 @@
+---
+description: This rule covers best practices and usage of Reown's AppKit SDK with Next.js, for any repo using AppKit and Next.js.
+alwaysApply: false
+---
+# Reown AppKit: Next.js Integration Guide
+
+## Next.js-Specific Setup
+- Use the [App Router](https://nextjs.org/docs/app/building-your-application/routing) for best compatibility with AppKit.
+- Always call `createAppKit` outside of React components (e.g., in a config or provider file) to avoid hydration mismatches and modal issues.
+- For SSR/SSG, ensure that any code using `window` or browser-only APIs is gated with `typeof window !== 'undefined'`.
+- Use dynamic imports or conditional rendering for components that depend on browser APIs.
+- When using Next.js API routes for authentication (e.g., SIWE/SIWX), follow the [NextAuth](https://next-auth.js.org/) and [AppKit SIWE](https://docs.reown.com/appkit/next/core/siwe) integration guides.
+
+## Installation & Packages
+- Use the AppKit CLI (`npx @reown/appkit-cli`) for a quick Next.js starter, or follow the [manual install steps](https://docs.reown.com/appkit/next/core/installation).
+- Install only the adapters and packages you need (e.g., `@reown/appkit-adapter-wagmi`, `@reown/appkit-adapter-ethers`, etc.).
+- Keep all `@reown` packages at the same version to avoid runtime errors.
+
+## Components & UI
+- Use `<appkit-wallet-button />` for direct wallet/social login buttons. Import the component library (e.g., `import "@reown/appkit-wallet-button/react"`).
+- Use AppKit hooks (see below) for programmatic control and state access.
+- For custom theming, use the `themeMode` and `themeVariables` options in your AppKit config.
+
+## Hooks & State Management
+- Use `useAppKit` to control the modal (open/close programmatically).
+- Use `useAppKitAccount` to access the current user's address, connection status, and embedded wallet info. For multi-chain, pass `{ namespace: 'eip155' | 'solana' | 'bip122' }`.
+- Use `useAppKitNetwork` to get/set the active network.
+- Use `useAppKitBalance`, `useWalletInfo`, and `useAppKitEvents` for blockchain data and event subscriptions.
+- All hooks are safe to use in client components only. For SSR, fetch data in API routes or React Server Components and pass as props.
+
+## Custom Networks
+- To add a custom EVM network, use `defineChain` from `@reown/appkit/networks` and include it in your `networks` array.
+- For non-EVM chains, follow the adapter-specific documentation.
+
+## Authentication (SIWE/SIWX)
+- For SIWE/SIWX, use the `@reown/appkit-siwe` package and follow the [Next.js SIWE guide](https://docs.reown.com/appkit/next/core/siwe).
+- Use NextAuth for session management. Configure your SIWE client with `createSIWEConfig` and pass the correct `getMessageParams`, `getNonce`, `getSession`, and `verifyMessage` functions.
+- Always validate addresses and chain IDs on the server side.
+
+## SSR/SSG & Browser APIs
+- Never access `window`, `document`, or other browser APIs in server components or during SSR. Use guards or dynamic imports.
+- For wallet connection and modal UI, always render in client components.
+- For blockchain data needed at build time, use Next.js data fetching methods (e.g., `getServerSideProps`, `getStaticProps`).
+
+## Example: AppKit Initialization (app router)
+```typescript
+// app/appkit.ts
+import { createAppKit } from '@reown/appkit'
+
+export const appkit = createAppKit({
+  projectId: 'YOUR_PROJECT_ID',
+  networks: [/* ... */],
+  adapters: [/* ... */],
+  features: { analytics: true },
+  themeMode: 'dark',
+  // ...other options
+})
+```
+
+## Example: Using AppKit in a Client Component
+```tsx
+'use client'
+import { useAppKitAccount } from '@reown/appkit/react'
+
+export function WalletInfo() {
+  const { address, isConnected } = useAppKitAccount()
+  return isConnected ? <div>Address: {address}</div> : <button>Connect</button>
+}
+```
+
+## Example: Custom Network
+```typescript
+import { defineChain } from '@reown/appkit/networks'
+
+const customNetwork = defineChain({
+  id: 123456789,
+  caipNetworkId: 'eip155:123456789',
+  chainNamespace: 'eip155',
+  name: 'Custom Network',
+  nativeCurrency: { decimals: 18, name: 'Ether', symbol: 'ETH' },
+  rpcUrls: { default: { http: ['RPC_URL'] } },
+  blockExplorers: { default: { name: 'Explorer', url: 'BLOCK_EXPLORER_URL' } },
+})
+
+createAppKit({
+  networks: [customNetwork],
+  // ...
+})
+```
+
+## Example: SIWE with NextAuth
+```typescript
+import { createSIWEConfig } from '@reown/appkit-siwe'
+import { getCsrfToken, signIn, signOut, getSession } from 'next-auth/react'
+
+export const siweConfig = createSIWEConfig({
+  getMessageParams: async () => ({
+    domain: typeof window !== 'undefined' ? window.location.host : '',
+    uri: typeof window !== 'undefined' ? window.location.origin : '',
+    chains: [1],
+    statement: 'Sign in with Ethereum',
+  }),
+  getNonce: async () => (await getCsrfToken()) ?? '',
+  getSession: async () => {
+    const session = await getSession()
+    if (!session || typeof session.address !== 'string' || typeof session.chainId !== 'number') return null
+    return { address: session.address, chainId: session.chainId }
+  },
+  verifyMessage: async ({ message, signature }) => {
+    const success = await signIn('credentials', { message, signature, redirect: false })
+    return Boolean(success?.ok)
+  },
+  signOut: async () => { await signOut({ redirect: false }); return true },
+})
+```

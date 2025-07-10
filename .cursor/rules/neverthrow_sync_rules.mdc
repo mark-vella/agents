@@ -1,0 +1,58 @@
+---
+description: This rule covers best practices and usage of neverthrow's synchronous Result API, and applies to any repo using neverthrow.
+globs:
+alwaysApply: true
+---
+
+# Neverthrow Synchronous API Usage (Result)
+
+## Core Principles
+- Use `Result<T, E>` to represent operations that may succeed (`Ok`) or fail (`Err`).
+- All `Result` objects are immutable; methods return new instances.
+- Always handle both success and error cases explicitly—never ignore a `Result`.
+
+## Creating Results
+- Use `ok(value)` for success, `err(error)` for failure.
+- Prefer custom error types (classes or enums) over plain strings for errors.
+
+## Handling Results
+- Use `.isOk()` and `.isErr()` to check the variant.
+- Use `.map(fn)` to transform the value if `Ok`, or `.mapErr(fn)` to transform the error if `Err`.
+- Use `.andThen(fn)` to chain operations that return a `Result` (a.k.a. flatMap/bind).
+- Use `.unwrapOr(defaultValue)` to extract the value or provide a fallback.
+- Use `.match(okFn, errFn)` to exhaustively handle both cases. This is the safest and most explicit way.
+- **Never** use `._unsafeUnwrap()` or `._unsafeUnwrapErr()` in production code—these are for tests only.
+
+## Combining Results
+- Use `Result.combine([ ... ])` to aggregate multiple `Result`s. Returns `Ok` if all succeed, or the first `Err`.
+- Use `Result.combineWithAllErrors([ ... ])` to collect all errors from a list of `Result`s.
+
+## Interop with Throwing Code
+- Use `Result.fromThrowable(fn, errorFn)` to wrap exception-throwing functions, mapping thrown errors to your error type.
+
+## Best Practices
+1. **Always handle every Result**—never ignore or leave unhandled.
+2. **Chain with `andThen`** for readable, linear error handling.
+3. **Use `fromThrowable`** for third-party or exception-based code.
+4. **Type your errors** for better safety and maintainability.
+5. **Install and use `eslint-plugin-neverthrow`** to enforce correct usage.
+6. **Avoid using `_unsafeUnwrap` outside of tests.**
+
+## Example
+```typescript
+import { ok, err, Result } from 'neverthrow';
+
+function parseNumber(str: string): Result<number, Error> {
+  const n = Number(str);
+  return isNaN(n) ? err(new Error('Invalid number')) : ok(n);
+}
+
+const result = parseNumber('42')
+  .map(x => x * 2)
+  .andThen(x => x > 50 ? err(new Error('Too large')) : ok(x));
+
+result.match(
+  value => console.log('Success:', value),
+  error => console.error('Failure:', error.message)
+);
+```

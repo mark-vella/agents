@@ -1,0 +1,629 @@
+# TypeScript & React Development Standards
+
+## Naming Conventions
+
+### Use PascalCase for Components, Interfaces, and Types
+```typescript
+// Type
+type FormOptions = {
+  lazyValidation: boolean;
+}
+
+// Interface
+interface LoginFormProps {
+  disabled: boolean;
+  options: FormOptions;
+}
+
+// Component
+const LoginForm = (props: LoginFormProps) => {}
+```
+
+### Use camelCase for Variables and Functions
+```typescript
+const coolArr = [];
+const flattenObject = <T>(obj: T) => {
+  //...
+}
+```
+
+### Use kebab-case for Folders
+```
+libs/common/utils/test-utils
+libs/common-mobile/hooks/cool-hooks
+```
+
+### Use camelCase for Non-Component Files and Higher Order Components
+```
+libs/common/utils/test-utils/testReact.ts
+libs/common-mobile/hooks/cool-hooks/useCoolHook.ts
+libs/common/components/withLogging.ts
+```
+
+**Prefix React Higher Order Components with `with`.**
+
+### Use Barrel Files for Multiple File Directories
+```typescript
+// my-hooks/index.ts
+export * from './useCoolHook.ts'
+export * from './useLameHook.ts'
+
+// Component
+import { useCoolHook, useLameHook } from './my-hooks';
+```
+
+### Use Named Exports in Library Public APIs
+```typescript
+// libs/common/hooks/index.ts
+export { useCoolHook } from './coolHook.ts'
+export { useLameHook } from './lameHook.ts'
+
+// Component
+import { useCoolHook, useLameHook } from '@capsicum/common/hooks';
+```
+
+### Avoid Default Exports
+```typescript
+// ❌
+export default CoolComponent = () => {}
+
+// ✅
+export const CoolComponent = () => {}
+export { CoolComponent };
+```
+
+### Use Aliased Paths for Cross-Referencing Libraries
+```typescript
+// ❌
+import { MyAwesomeComponent } from '../../common/ui';
+
+// ✅
+import { MyAwesomeComponent } from '@capsicum/common-mobile/ui';
+```
+
+### Use Relative Paths Within the Same Library
+```typescript
+// ❌
+import { MyAwesomeComponent } from '@fe-nexus/mobile/common/ui';
+
+// ✅
+import { MyAwesomeComponent } from './MyAwesomeComponent';
+```
+
+## Component Structure
+
+### Follow Consistent Component Structure
+```typescript
+// 1. Imports
+import React, { PropsWithChildren, useMemo } from 'react';
+
+// 2. Types
+export type FormElementProps = PropsWithChildren<{
+  // Some Props
+}>;
+
+// 3. Constant Variables
+const DEFAULT_NAME = 'default';
+
+// 4. Component
+export const Element = (...props) => {
+  // 4.1 Declarations
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // 4.2 Custom Hooks
+  const form = useForm();
+
+  // 4.3 Functions
+  const handleInput = () => {}
+  const memoizedHandleInput = useCallback(() => {}, []);
+
+  // 4.4 Memoized Values
+  const memoizedInput = useMemo(() => 'yes', []);
+
+  // 4.5 Effects
+  useEffect(() => {
+    //...
+  }, []);
+
+  // 4.6 JSX
+  return (
+    <div>
+      <div>
+        ...
+      </div>
+    </div>
+  );
+};
+```
+
+### Prefer Destructuring Props with Default Values at the End
+```typescript
+type MyProps = {
+  name: string;
+  surname: string;
+}
+
+// ✅
+export const MyComponent = ({ name, surname }: MyProps) => {
+  return (
+    <div>
+      <Text>{name + ' ' + surname}</Text>
+    </div>
+  );
+};
+
+// ✅
+export const MyComponent = ({
+  surname,
+  height,
+  age = 18,
+  name = 'John',
+}: MyProps) => {
+  return (
+    <div>
+      <Text>{name + ' ' + surname}</Text>
+    </div>
+  );
+};
+```
+
+### Avoid Inline Functions Spanning Multiple Lines
+```typescript
+// ❌
+return (
+  <TouchableOpacity onPress={() => {
+    console.log('Something');
+    setState('Pressed');
+    setIsDisabled(true);
+  }}>
+    <Text>Press Me</Text>
+  </TouchableOpacity>
+)
+
+// ✅
+const onPressText = () => {
+  console.log('Something');
+  setState('Pressed');
+  setIsDisabled(true);
+}
+
+return (
+  <TouchableOpacity onPress={onPressText}>
+    <Text>Press Me</Text>
+  </TouchableOpacity>
+)
+```
+
+### Use PropsWithChildren Type
+```typescript
+// ❌
+export type ComponentProps = {
+  label: string;
+  children: ReactNode;
+  description?: string;
+};
+
+// ✅
+export type ComponentProps = PropsWithChildren<{
+  label: string;
+  description?: string;
+}>;
+```
+
+### Avoid Using Index as Key Prop
+```typescript
+// ❌
+const list = ["1", "2", "3"];
+return (
+  <ul>
+    {list.map((item, index) => (
+      <li key={index}>{item}</li>
+    ))}
+  </ul>
+);
+
+// ✅
+const list = [
+  { id: 1, value: "1"},
+  { id: 2, value: "2"},
+  { id: 3, value: "3"}
+];
+return (
+  <ul>
+    {list.map(({ id, value }) => (
+      <li key={id}>{value}</li>
+    ))}
+  </ul>
+);
+```
+
+### Use Fragments Instead of Redundant Wrapping Elements
+```typescript
+// ❌
+return (
+  <View>
+    <View>
+      <Text>Hello</Text>
+    </View>
+    <View>
+      <Text>World</Text>
+    </View>
+  </View>
+);
+
+// ✅
+return (
+  <>
+    <View>
+      <Text>Hello</Text>
+    </View>
+    <View>
+      <Text>World</Text>
+    </View>
+  </>
+);
+```
+
+### Break Down Bigger Components
+```typescript
+// ❌
+const Profile = ({ isNew }) => {
+  if (isNew) {
+    return <View>...</View>;
+  }
+  return <View>...</View>;
+};
+
+// ✅
+const NewProfile = () => {
+  return <View>...</View>;
+};
+
+const ExistingProfile = () => {
+  return <View>...</View>;
+};
+```
+
+### Use Shorthand for Truthy Boolean Props
+```typescript
+// ❌
+<SomeOtherComponent enabled={true} />
+
+// ✅
+<SomeOtherComponent enabled />
+```
+
+### Use Functional Components
+```typescript
+// ❌
+export class MyComponent extends React.Component {
+  render() {
+    return <View>...</View>;
+  }
+}
+
+// ✅
+export const MyComponent = () => {
+  return <View>...</View>;
+};
+```
+
+### Use Double-Quotes for JSX String Props, Single-Quotes for Everything Else
+```typescript
+// ❌
+const [name, setName] = useState<string>("");
+return <View name='hey'>...</View>;
+
+// ✅
+const [name, setName] = useState<string>('');
+return <View name="hey">...</View>;
+```
+
+### Use Arrow Functions Within Components
+```typescript
+// ❌
+export const MyComponent = () => {
+  function onClickHandler() {
+    // My code
+  }
+  return <div onClick={onClickHandler}>...</div>;
+};
+
+// ✅
+export const MyComponent = () => {
+  const onClickHandler = () => {
+    // My code
+  }
+  return <div onClick={onClickHandler}>...</div>;
+};
+```
+
+### Prefix Event Handlers with `on`
+```typescript
+// ❌
+const clickHandler = () => { /* ... */ }
+return <div onClick={clickHandler}>...</div>;
+
+// ✅
+const onClickHandler = () => { /* ... */ }
+return <div onClick={onClickHandler}>...</div>;
+```
+
+## Hooks
+
+### Extract Generic Logic to Hooks
+```typescript
+// ❌
+export const MyComponent = () => {
+  const [count, setCount] = useState<number>(0);
+  const increment = () => setCount(count++);
+  const decrement = () => setCount(count--);
+  return (
+    <>
+      <TouchableOpacity onPress={increment}>
+        <Text>Increment Me</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={decrement}>
+        <Text>Decrement Me</Text>
+      </TouchableOpacity>
+      <Text>The count is: {count}</Text>
+    </>
+  );
+};
+
+// ✅
+export const useCounter = () => {
+  const [count, setCount] = useState<number>(0);
+  const increment = () => setCount(count++);
+  const decrement = () => setCount(count--);
+  return { count, increment, decrement };
+};
+
+export const MyComponent = () => {
+  const { count, increment, decrement } = useCounter();
+  return (
+    <>
+      <TouchableOpacity onPress={increment}>
+        <Text>Increment Me</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={decrement}>
+        <Text>Decrement Me</Text>
+      </TouchableOpacity>
+      <Text>The count is: {count}</Text>
+    </>
+  );
+};
+```
+
+### Specify All Hook Dependencies
+```typescript
+// ❌
+const myValue = useMemo(() => {
+  const poweredValue = data.num ** 2;
+  return poweredValue;
+}, []);
+
+// ✅
+const myValue = useMemo(() => {
+  const poweredValue = data.num ** 2;
+  return poweredValue;
+}, [data]);
+```
+
+### Memoize Callbacks/Values Appropriately
+```typescript
+// ❌
+const Component = ({ onPressHandler }) => {
+  return <TouchableOpacity onPress={onPressHandler}>...</TouchableOpacity>
+}
+export const AtomicComponent = memo(Component);
+
+export const MyComponent = () => {
+  const performSomething = () => { /* ... */ };
+  return <AtomicComponent onPressHandler={performSomething}/>
+};
+
+// ✅
+export const MyComponent = () => {
+  const performSomething = useCallback(() => {
+    // ...
+  }, [deps]);
+  return <AtomicComponent onPressHandler={performSomething}/>
+};
+```
+
+## Functions
+
+### Use Implicit Returns for Lean Functions
+```typescript
+// ❌
+export const sum = (a, b) => {
+  return a + b;
+};
+
+// ✅
+export const sum = (a, b) => a + b;
+```
+
+### Avoid Long Parameter Lists
+```typescript
+// ❌
+export const format = (type: string, isBefore: boolean, isAfter: boolean, symbol: string, sanitize: boolean) => {
+  // ...
+};
+
+// ✅
+export const format = ({
+  type,
+  isBefore,
+  isAfter,
+  symbol,
+  sanitize
+}: Props) => {
+  // ...
+};
+```
+
+### Strongly-Type Functions
+```typescript
+// ❌
+export const getProps = (obj: any, ...props: any[]): any => {
+  // ...
+};
+
+// ✅
+export const getProps = <
+  TObj extends Record<PropertyKey, unknown>,
+  TProp extends keyof TObj
+>(obj: TObj, ...props: TProp[]): { [K in TProp]: TObj[K] } => {
+  // ..
+};
+```
+
+### Prefer Pure Functions
+```typescript
+// ❌
+const add = (a: number, b: number): number => {
+  const myElement = document.getElementById('my-id');
+  myElement.classList.add('cool-class');
+  return a + b;
+};
+
+// ✅
+const add = (a: number, b: number): number => a + b;
+
+const addClassToElementById = (id: string, ...classes: string[]): void => {
+  const myElement = document.getElementById(id);
+  classes.forEach((class) => {
+    myElement.classList.add(class);
+  });
+}
+```
+
+## Conditional Rendering
+
+### Use `&&` Operator When Else Clause Not Required
+```typescript
+// ❌
+type Props = { noOfInvestments: number; }
+export const MyComponent = ({ noOfInvestments }: Props) => {
+  return <>{noOfInvestments && <Portfolio />}</>
+};
+
+// ✅
+export const MyComponent = ({ noOfInvestments }: Props) => {
+  return <>{noOfInvestments > 0 && <Portfolio />}</>
+};
+```
+
+### Use Ternary Operator When Else Clause Required
+```typescript
+// ❌
+type Props = { name?: string; }
+export const MyComponent = ({ name }: Props) => {
+  return (
+    <>
+      {name && <UserProfile />}
+      {!name && <GuestProfile />}
+    </>
+  );
+};
+
+// ✅
+export const MyComponent = ({ name }: Props) => {
+  return <>{!!name ? <UserProfile /> : <GuestProfile />}</>
+};
+```
+
+### Prefer Early Returns
+```typescript
+// ❌
+export const MyComponent = ({ isLoading }: Props) => {
+  return isLoading ? (
+    <View>Loading...</View>
+  ) : (
+    <View>Content...</View>
+  );
+};
+
+// ✅
+export const MyComponent = ({ isLoading }: Props) => {
+  if (isLoading) {
+    return <View>Loading...</View>;
+  }
+  return <View>Content...</View>;
+};
+```
+
+## TypeScript
+
+### Prefer Types Over Interfaces
+```typescript
+// ❌
+interface Props {
+  isDisabled: boolean;
+}
+
+// ✅
+type MyComponentProps = {
+  isDisabled: boolean;
+}
+```
+
+### Avoid Type Assertions
+```typescript
+// ❌
+const oneEmployee = {
+  name: 'John',
+  surname: 'Doe',
+  salary: 20000
+} as Employee;
+
+// ✅
+const oneEmployee = {
+  name: 'John',
+  surname: 'Doe',
+  occupation: 'Developer',
+  salary: 20000
+} satisfies Employee;
+```
+
+### Prefer Unknown Over Any
+```typescript
+// ❌
+function myMethod(cb: any) {
+  cb();
+}
+
+// ✅
+function myMethod(cb: unknown) {
+  if (typeof cb === 'function') {
+    cb();
+  }
+}
+```
+
+## Third-Party Libraries
+
+### Abstract Implementations When Feasible
+```typescript
+// ❌
+import { ImageWrapper } from 'cool-image-lib';
+export const MyComponent = () => {
+  return <ImageWrapper src="some-source">...</ImageWrapper>;
+};
+
+// ✅
+import { ImageWrapper } from 'cool-image-lib';
+export const Image = () => {
+  return <ImageWrapper src="some-source">...</ImageWrapper>;
+};
+
+export const MyComponent = () => {
+  return <Image src="some-source">...</Image>;
+};
+```
+description:
+globs:
+alwaysApply: false
+---
